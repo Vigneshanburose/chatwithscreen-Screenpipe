@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat with Screen Knowledge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div id="chat-container" class="max-w-md mx-auto mt-8 p-4 bg-gray-800 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-4 text-center text-gray-100">Chat with Your Screen Recording</h1>
+        <div id="conversation" class="h-96 overflow-y-auto border border-gray-700 rounded p-3 mb-4 bg-gray-800">
+            <!-- Chat messages will be displayed here -->
+        </div>
+        <div id="input-area" class="flex">
+            <input type="text" id="question-input" placeholder="Ask about the video recording..." class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-100 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 text-white border-gray-700">
+            <button id="send-button" class="ml-2 px-4 py-2 bg-blue-600 hover:bg-blue-800 text-white font-bold rounded focus:outline-none focus:shadow-outline">Send</button>
+        </div>
+         <p class="text-gray-400 text-sm mt-2 text-center">Analyzing: Latest Screen Recording</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const conversationDiv = document.getElementById('conversation');
+            const questionInput = document.getElementById('question-input');
+            const sendButton = document.getElementById('send-button');
+
+            sendButton.addEventListener('click', sendMessage);
+
+            questionInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            function sendMessage() {
+                const userQuestion = questionInput.value.trim();
+                if (!userQuestion) return;
+
+                const userMessageDiv = document.createElement('div');
+                userMessageDiv.classList.add('user-message', 'text-right', 'text-blue-300', 'mb-2', 'p-2', 'bg-blue-700', 'rounded-xl', 'inline-block', 'max-w-xs', 'float-right', 'clear-both');
+                userMessageDiv.textContent = userQuestion;
+                conversationDiv.appendChild(userMessageDiv);
+
+                fetch('/ask_gemini', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'user_question': userQuestion
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const botMessageDiv = document.createElement('div');
+                    botMessageDiv.classList.add('bot-message', 'text-left', 'text-green-300', 'mb-2', 'p-2', 'bg-gray-700', 'rounded-xl', 'inline-block', 'max-w-xs', 'float-left', 'clear-both');
+                    botMessageDiv.textContent = data.response;
+                    conversationDiv.appendChild(botMessageDiv);
+                    conversationDiv.scrollTop = conversationDiv.scrollHeight;
+                })
+                .catch(error => {
+                    console.error('Error fetching OCR text:', error);
+                    const botMessageDiv = document.createElement('div');
+                    botMessageDiv.classList.add('bot-message', 'text-left', 'text-red-300', 'mb-2', 'p-2', 'bg-red-700', 'rounded-xl', 'inline-block', 'max-w-xs', 'float-left', 'clear-both');
+                    botMessageDiv.textContent = 'Error communicating with Gemini API.';
+                    conversationDiv.appendChild(botMessageDiv);
+                    conversationDiv.scrollTop = conversationDiv.scrollHeight;
+                });
+
+                questionInput.value = '';
+            }
+        });
+    </script>
+</body>
+</html>
